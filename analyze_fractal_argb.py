@@ -128,6 +128,10 @@ for i, led_seq in enumerate(leds):
 #    print(f"'rgb({r}, {g}, {b})',")
 
 print()
+for r, g, b in leds[0]:
+    print(f"'rgb({r}, {g}, {b})',")
+
+print()
 offsets = [0]
 for i in range(1, 6):
     base = leds[0]

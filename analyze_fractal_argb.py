@@ -2,7 +2,10 @@ from pprint import pprint
 import sys
 
 
-MIN_RST_T = 0.000006
+# Times from the simplified contraints table at
+# https://wp.josh.com/2014/05/13/ws2812-neopixels-are-not-so-finicky-once-you-get-to-know-them/
+RST_MIN = 6e-6    # Minimum low time for reset: 6 µs
+T1H_MIN = 5.5e-7  # Minimum high time for 1 bit: 0.55 µs
 
 
 class WS2812BParser:
@@ -15,7 +18,6 @@ class WS2812BParser:
             self.timestamps.append(float(ts_s))
             self.bits.append(int(bit_s))
         self.index = 0
-        self.start_times = []
 
     def ts(self, offset=0):
         return self.timestamps[self.index + offset]
@@ -31,7 +33,7 @@ class WS2812BParser:
             self.next()
         while True:
             lo_time = self.ts(1) - self.ts()
-            if lo_time > MIN_RST_T:
+            if lo_time > RST_MIN:
                 self.next()
                 print(f'Resynced, current ts is {self.ts()} ({self.index})')
                 return
@@ -46,10 +48,10 @@ class WS2812BParser:
         self.next()
         ts_fall = self.ts()
         t_hi = ts_fall - ts_rise
-        val = int(t_hi > 0.0000005)
+        val = int(t_hi > T1H_MIN)
         self.next()
         t_lo = self.ts() - ts_fall
-        reset = t_lo > MIN_RST_T
+        reset = t_lo > RST_MIN
         return val, reset
 
     def next_triplet(self):
@@ -71,21 +73,22 @@ class WS2812BParser:
             self.resync()
             while True:
                 triplets = []
-                self.start_times.append(self.ts())
+                start_time = self.ts()
                 while True:
                     triplet, reset = self.next_triplet()
                     if triplet:
                         triplets.append(triplet)
                     if reset:
                         break
-                yield triplets
+                yield start_time, triplets
         except StopIteration:
             pass
 
 
 parser = WS2812BParser()
-updates = list(parser.rgb_triplets())
+start_times, updates = zip(*parser.rgb_triplets())
 print(len(updates))
+
 cycle_len = 0
 commands = {}
 for j, triplets in enumerate(updates):
@@ -104,7 +107,8 @@ for j, triplets in enumerate(updates):
         assert commands[combo] == j % cycle_len, f"{j} {commands[combo]}"
 
 for command in commands:
-    print(" ".join(f"#{r:02X}{g:02X}{b:02X}" for r, g, b in command))
+    pass
+    #print(" ".join(f"#{r:02X}{g:02X}{b:02X}" for r, g, b in command))
     #print(",".join(f"{r},{g},{b}" for r, g, b in command))
 
 leds = []
@@ -114,10 +118,14 @@ for i in range(6):
 print()
 for i, led_seq in enumerate(leds):
     print(i)
-    print(f'Average R: {sum(t[0] for t in led_seq)/len(led_seq)}')
-    print(f'Average G: {sum(t[1] for t in led_seq)/len(led_seq)}')
-    print(f'Average B: {sum(t[2] for t in led_seq)/len(led_seq)}')
+    print(f'Average R: {round(sum(t[0] for t in led_seq)/len(led_seq))}')
+    print(f'Average G: {round(sum(t[1] for t in led_seq)/len(led_seq))}')
+    print(f'Average B: {round(sum(t[2] for t in led_seq)/len(led_seq))}')
     break
+
+#print()
+#for r, g, b in leds[0]:
+#    print(f"'rgb({r}, {g}, {b})',")
 
 print()
 offsets = [0]
@@ -132,9 +140,11 @@ for i in range(1, 6):
             break
     else:
         print(f'No cycle found for LED {i}')
-print([o1 - o0 for o0, o1 in zip(offsets, offsets[1:] + [955])])
+print([o1 - o0 for o0, o1 in zip(offsets, offsets[1:] + [cycle_len])])
 
 print()
-color_lengths = [t1 - t0 for t0, t1 in zip(parser.start_times[:-1], parser.start_times[1:])]
+color_lengths = [t1 - t0 for t0, t1 in zip(start_times[:-1], start_times[1:])]
 color_lengths = color_lengths[:-1]
-print(f'Color lenghts: min {min(color_lengths):.5f} s, max {max(color_lengths):.5f} s, mean {sum(color_lengths)/len(color_lengths):.5f} s')
+avg_length = sum(color_lengths)/len(color_lengths)
+print(f'Color lenghts: min {min(color_lengths):.5f} s, avg {avg_length:.5f} s, max {max(color_lengths):.5f} s')
+print(f'Average update frequency: {1 / avg_length:.2f} Hz')

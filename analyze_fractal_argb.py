@@ -12,8 +12,9 @@ class WS2812BParser:
     def __init__(self):
         self.timestamps = []
         self.bits = []
-        sys.stdin.readline()
-        for line in sys.stdin:
+        inp = open(sys.argv[1])
+        inp.readline()
+        for line in inp:
             ts_s, bit_s = line.split(',')
             self.timestamps.append(float(ts_s))
             self.bits.append(int(bit_s))

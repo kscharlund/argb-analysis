@@ -14,7 +14,7 @@ implementation.
 ## The WS2812b Protocol
 
 First off, I figured out that ARGB LEDs in modern PC cases typically use the
-WS2812b protocol. This pretty simple protoocol is documented in a
+WS2812b protocol. This pretty simple protocol is documented in a
 [datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf).
 There are also some quite nice web resources available, including a
 [very useful article](https://wp.josh.com/2014/05/13/ws2812-neopixels-are-not-so-finicky-once-you-get-to-know-them/)
@@ -52,3 +52,17 @@ Here are some observations:
 * The average R, G and B values for one LED over the whole cycle are 17, 170 and 200.
 
 I've made a [simple JS animation](animation.html) of the colors.
+
+## Extending To Other Fans
+
+By interpolating the starting offsets at other angles, I think it should be
+possible to achieve visually similar effects for fans with more than 6 LEDs.
+
+Here are some visualizations generated in this way, for 6, 8 and 15 LEDs:
+
+![Static visualization of color progression, 6 LEDs](6_led.png)
+![Static visualization of color progression, 8 LEDs](8_led.png)
+![Static visualization of color progression, 15 LEDs](15_led.png)
+
+Each line corresponds to one step in the animation and is divided horizontally
+into the number of configured LEDs.
